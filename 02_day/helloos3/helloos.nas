@@ -35,9 +35,9 @@ entry:
 		MOV		DS,AX
 		MOV		ES,AX
 
-		MOV		SI,msg
+		MOV		SI,msg			; msg ラベルのメモリ番地をSIに代入した
 putloop:
-		MOV		AL,[SI]
+		MOV		AL,[SI]			; []はメモリを指す(BX, BP, SI, DIのみ利用可能) `SI` 番地にMOVする. ALは8bitなのでBYTE指定は不要
 		ADD		SI,1			; SIに1を足す
 		CMP		AL,0
 		JE		fin
