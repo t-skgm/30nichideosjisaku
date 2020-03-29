@@ -43,7 +43,12 @@ entry:
 		MOV		CL,2			; セクタ2 (シリンダはセクタ1~18の集まり), セクタ1にはIPLが
 								; 以上, 80*2*18*512B = 1,440KB
 
-		MOV		AH,0x02			; ディスク読みこみ
+		MOV		SI,0			; 失敗回数を数えるレジスタ
+
+; ディクス読み込みtry
+
+retry:
+		MOV		AH,0x02			; ディスク読みこみ (AH=0x02)
 								; 戻り値 (CF=Carry Flag)
 								; FLAGS.CF == 0: エラーなし, AH == 0
 								; FLAGS.CF == 1: エラーあり, AHにエラーコード
@@ -57,8 +62,14 @@ entry:
 								; この仕様のため、L35で DS=0 にしている
 		MOV		DL,0x00			; ドライブ番号0 (Aドライブから)
 		INT		0x13			; ディスクBIOS読み出し関数
-		JC		error			; jump if carry. Carry Flag==1
-								; つまり上記読み込みでエラー発生ならジャンプ
+		JNC		fin				; jump if not carry. エラーが起きなければ `fin` に飛ぶ
+		ADD		SI,1			; 失敗回数(SI)++1
+		CMP		SI,5
+		JAE		error			; jump if above or equal. SI >= 5 なら `error` へ
+		MOV		AH,0x00
+		MOV		DL,0x00			; Aドライブ指定
+		INT		0x13			; AH=0x00, DL=0x00, INT 0x13 => Aドライブのリセット
+		JMP		retry
 
 ; 読み終わったけどとりあえずやることないので寝る
 
