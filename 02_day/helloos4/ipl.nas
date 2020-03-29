@@ -1,6 +1,10 @@
 ; hello-os
 ; TAB=4
 
+; helloos3 -> 4
+; - helloos.nasがブートセクタだけになったので、ipl.nasにrenameされた。
+; - makeで、ipl.bin/ipl.lstが生成されるようになった
+
 		ORG		0x7c00			; このプログラムがどこに読み込まれるのか
 
 ; 以下は標準的なFAT12フォーマットフロッピーディスクのための記述
