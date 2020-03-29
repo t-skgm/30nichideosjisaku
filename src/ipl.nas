@@ -1,4 +1,4 @@
-; hello-os
+; haribote-ipl
 ; TAB=4
 
 		ORG		0x7c00			; このプログラムがどこに読み込まれるのか
@@ -7,7 +7,7 @@
 
 		JMP		entry
 		DB		0x90
-		DB		"HELLOIPL"		; ブートセクタの名前を自由に書いてよい（8バイト）
+		DB		"HARIBOTE"		; ブートセクタの名前を自由に書いてよい（8バイト）
 		DW		512				; 1セクタの大きさ（512にしなければいけない）
 		DB		1				; クラスタの大きさ（1セクタにしなければいけない）
 		DW		1				; FATがどこから始まるか（普通は1セクタ目からにする）
@@ -22,7 +22,7 @@
 		DD		2880			; このドライブ大きさをもう一度書く
 		DB		0,0,0x29		; よくわからないけどこの値にしておくといいらしい
 		DD		0xffffffff		; たぶんボリュームシリアル番号
-		DB		"HELLO-OS   "	; ディスクの名前（11バイト）
+		DB		"HARIBOTEOS "	; ディスクの名前（11バイト）
 		DB		"FAT12   "		; フォーマットの名前（8バイト）
 		RESB	18				; とりあえず18バイトあけておく
 
@@ -32,10 +32,43 @@ entry:
 		MOV		AX,0			; レジスタ初期化
 		MOV		SS,AX
 		MOV		SP,0x7c00
-		MOV		DS,AX
-		MOV		ES,AX
+		MOV		DS,AX			; デフォルトセグメントレジスタの初期化
 
+; ディスクを読む
+
+		MOV		AX,0x0820
+		MOV		ES,AX
+		MOV		CH,0			; シリンダ0 (フロッピーはシリンダ0~79の集まり)
+		MOV		DH,0			; ヘッダ0 (読み取りヘッダを当てる方向, 面/裏)
+		MOV		CL,2			; セクタ2 (シリンダはセクタ1~18の集まり), セクタ1にはIPLが
+								; 以上, 80*2*18*512B = 1,440KB
+
+		MOV		AH,0x02			; ディスク読みこみ
+								; 戻り値 (CF=Carry Flag)
+								; FLAGS.CF == 0: エラーなし, AH == 0
+								; FLAGS.CF == 1: エラーあり, AHにエラーコード
+		MOV		AL,1			; 1セクタ読む
+		MOV		BX,0			; バッファアドレス(ES:BX)
+								; BXだと64KBまでしか使えないので、セグメントレジスタで表現。
+								; ES*16 + BXで約1MBまで参照可
+								; ES=0x0820, BX=0 なので、0x8200~0x83ffに読み込み
+								; 0x8000~0x81ff にはブートセクタを入れる予定。
+								; なお、セグメントレジスタを省略するとDS:を指定したものとみなされる
+								; この仕様のため、L35で DS=0 にしている
+		MOV		DL,0x00			; ドライブ番号0 (Aドライブから)
+		INT		0x13			; ディスクBIOS読み出し関数
+		JC		error			; jump if carry. Carry Flag==1
+								; つまり上記読み込みでエラー発生ならジャンプ
+
+; 読み終わったけどとりあえずやることないので寝る
+
+fin:
+		HLT						; 何かあるまでCPUを停止させる
+		JMP		fin				; 無限ループ
+
+error:
 		MOV		SI,msg
+
 putloop:
 		MOV		AL,[SI]
 		ADD		SI,1			; SIに1を足す
@@ -45,13 +78,10 @@ putloop:
 		MOV		BX,15			; カラーコード
 		INT		0x10			; ビデオBIOS呼び出し
 		JMP		putloop
-fin:
-		HLT						; 何かあるまでCPUを停止させる
-		JMP		fin				; 無限ループ
 
 msg:
 		DB		0x0a, 0x0a		; 改行を2つ
-		DB		"hello, world"
+		DB		"load error"
 		DB		0x0a			; 改行
 		DB		0
 
