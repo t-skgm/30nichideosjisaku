@@ -1,7 +1,7 @@
 ; hello-os
 ; TAB=4
 
-		ORG		0x7c00			; このプログラムがどこに読み込まれるのか
+		ORG		0x7c00			; このプログラムがどこに読み込まれるのか. どこでいいわけではなく。ブートセクタが読み込まれるアドレスがここ。
 
 ; 以下は標準的なFAT12フォーマットフロッピーディスクのための記述
 
@@ -35,18 +35,19 @@ entry:
 		MOV		DS,AX
 		MOV		ES,AX
 
-		MOV		SI,msg
+		MOV		SI,msg			; msg ラベルのメモリ番地をSIに代入した
 putloop:
-		MOV		AL,[SI]
+		MOV		AL,[SI]			; []はメモリを指す(BX, BP, SI, DIのみ利用可能) `SI` 番地にMOVする. ALは8bitなのでBYTE指定は不要
 		ADD		SI,1			; SIに1を足す
-		CMP		AL,0
-		JE		fin
+		CMP		AL,0			; AL == 0 (msgに文字が残っているか?)
+		JE		fin				; Jump if. => `if (AL == 0) { goto fin; };`
+		; 文字表示部. AHに関数アドレスを入れ、カラーコードを指定後、INTでビデオBIOSを呼び出すと文字が表示される.
 		MOV		AH,0x0e			; 一文字表示ファンクション
 		MOV		BX,15			; カラーコード
-		INT		0x10			; ビデオBIOS呼び出し
+		INT		0x10			; interrupt. ビデオBIOS呼び出し
 		JMP		putloop
 fin:
-		HLT						; 何かあるまでCPUを停止させる
+		HLT						; halt. 何かあるまでCPUを停止させる. 実行しなくても無限ループに入るだけだが、CPUに計算させたくないので.
 		JMP		fin				; 無限ループ
 
 msg:

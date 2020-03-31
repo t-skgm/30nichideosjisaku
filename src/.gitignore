@@ -1,0 +1,8 @@
+.DS_Store
+
+# binaries
+fdimage0.bin
+helloos.img
+haribote.img
+ipl.bin
+ipl.lst
